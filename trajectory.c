@@ -32,8 +32,9 @@ typedef struct _parametersDesired{
 
 //Function definitions
 void* trajectoryThread(void*);
-void parametersTrajectory getSensor();
+void sendVel(parametersDesired paramOut);
 parametersTrajectory getSensor();
+void setupProxy();
 
 //Global Variables
 mqd_t sensorToTrajectoryQueue, trajectoryToVelocityQueue;	//Messeging queue
@@ -49,28 +50,16 @@ mqd_t sensorToTrajectoryQueue, trajectoryToVelocityQueue;	//Messeging queue
 * none
 *******************************************************/
 int main(void){
-	///////////OPEN MESSAGING QUEUES////////////////////////////////////////////////
-	//Open messaging queues         
-	sensorToTrajectoryQueue = mq_open("sensorToTrajectoryQ", O_RDONLY|O_CREAT, S_IRWXU, NULL);
-	trajectoryToVelocityQueue = mq_open("trajectoryToVelocityQ", O_WRONLY|O_CREAT|O_NONBLOCK, S_IRWXU, NULL);
-	//Error check messaging queue
-	if(sensorToTrajectoryQueue < 0){
-		printf("Trajectory Thread has Failed to Create Sensor Queue\n");
-	}else{    
-		printf("Trajectory Thread has Created Sensor Queue!\n");
-	}
-   //Error check messaging queue
-	if(trajectoryToVelocityQueue < 0){
-		printf("Trajectory Thread has Failed to Create Velocity Queue\n");
-	}else{    
-		printf("Trajectory Thread has Created Velocity Queue!\n");
-	}
+	//Setup Proxy
+	setupProxy();
+	
+	
 	////////////////////////////////////////////////////////////////////////////////////
 	/////////THREADING/////////////////////////////////////////////////////////////////
    	//Give threads IDs 
    	pthread_t trajectoryThreadID;
 	//Create threads
-	pthread_create(&trajectoryThreadID, NULL, trajectoryThread, (void*)&param);	
+	pthread_create(&trajectoryThreadID, NULL, trajectoryThread, NULL);	
 	//Finish threads
 	pthread_join(trajectoryThreadID, NULL );
 	////////////////////////////////////////////////////////////////////////////////////
@@ -126,11 +115,8 @@ void* trajectoryThread(void* unUsed){
 		}
 
 		rho = sqrt(pow(deltaX ,2) + pow(deltaY,2));
-		if (deltaY!=0){
-			alpha = -1*paramIn.heading + atan(deltaX/deltaY);
-		}else{
-			alpha = -1*paramIn.heading + 3.14/2;
-		}
+		
+		alpha = -1*paramIn.heading + atan(deltaX/deltaY);
 		
 		
 		//Find output values
@@ -167,7 +153,8 @@ void* trajectoryThread(void* unUsed){
 *******************************************************/
 parametersTrajectory getSensor(){
 	parametersTrajectory paramIn;		//Parameters to be passed in from sensor
-
+	int retVal; 
+	
 	//Block until data recieved
 	retVal = mq_receive(sensorToTrajectoryQueue, (char*)&paramIn, 4096, NULL);
 
@@ -193,10 +180,44 @@ parametersTrajectory getSensor(){
 * none
 *******************************************************/
 void sendVel(parametersDesired paramOut){
+	int retVal; 
+	
 	//Send data
 	retVal = mq_send(trajectoryToVelocityQueue, (char*)&paramOut, sizeof(paramOut), 0);
 	if(retVal < 0){
 		printf("Trajectory Send to Sensor Thread Failed!\n");		
 	}
 
+}
+
+*
+******************************************************
+* setupProxy
+* Setups up Proxy
+*
+* params:
+* none
+*
+* returns:
+* none
+*****************************************************
+**/
+void setupProxy(){
+///////////OPEN MESSAGING QUEUES////////////////////////////////////////////////
+	//Open messaging queues         
+	sensorToTrajectoryQueue = mq_open("/home/tessal/sensorToTrajectoryQ1", O_RDONLY|O_CREAT, S_IRWXU, NULL);
+	trajectoryToVelocityQueue = mq_open("/home/tessal/trajectoryToVelocityQ1", O_WRONLY|O_CREAT|O_NONBLOCK, S_IRWXU, NULL);
+	//Error check messaging queue
+	if(sensorToTrajectoryQueue < 0){
+		printf("Trajectory Thread has Failed to Create Sensor Queue\n");
+	}else{    
+		printf("Trajectory Thread has Created Sensor Queue!\n");
+	}
+   //Error check messaging queue
+	if(trajectoryToVelocityQueue < 0){
+
+		printf("Trajectory Thread has Failed to Create Velocity Queue\n");
+	}else{    
+		printf("Trajectory Thread has Created Velocity Queue!\n");
+	}
 }
