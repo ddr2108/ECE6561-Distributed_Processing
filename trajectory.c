@@ -153,7 +153,8 @@ void* trajectoryThread(void* unUsed){
 *******************************************************/
 parametersTrajectory getSensor(){
 	parametersTrajectory paramIn;		//Parameters to be passed in from sensor
-	int retVal; 
+
+	int retVal; 
 	
 	//Block until data recieved
 	retVal = mq_receive(sensorToTrajectoryQueue, (char*)&paramIn, 4096, NULL);
@@ -190,7 +191,7 @@ void sendVel(parametersDesired paramOut){
 
 }
 
-*
+/*
 ******************************************************
 * setupProxy
 * Setups up Proxy
